@@ -11,15 +11,15 @@ The model evolves the horizontal velocity $\mathbf{u} = (u, v)$ and perturbation
 
 **Momentum:**
 
-$$\frac{\partial \mathbf{u}}{\partial t} + \frac{1}{\text{Ro}} \hat{\mathbf{z}} \times \mathbf{u} + \frac{1}{\text{Fr}^2} \nabla h + \nu_\mathfrak{p} \nabla^\mathfrak{p} \mathbf{u} = -(\mathbf{u} \cdot \nabla)\mathbf{u}$$
+$$\frac{\partial \mathbf{u}}{\partial t} + \frac{1}{\text{Ro}} \hat{\mathbf{z}} \times \mathbf{u} + \frac{1}{\text{Fr}^2} \nabla h + \nu_\mathfrak{p} \nabla^{2\mathfrak{p}} \mathbf{u} = -(\mathbf{u} \cdot \nabla)\mathbf{u}$$
 
 **Continuity:**
 
-$$\frac{\partial h}{\partial t} + \nabla \cdot \mathbf{u} + \nu_\mathfrak{p} \nabla^\mathfrak{p} h = -\nabla \cdot (h\mathbf{u})$$
+$$\frac{\partial h}{\partial t} + \nabla \cdot \mathbf{u} + \nu_\mathfrak{p} \nabla^{2\mathfrak{p}} h = -\nabla \cdot (h\mathbf{u})$$
 
 **Diagnostics:** $\zeta = \nabla \cdot (\hat{\mathbf{z}} \times \mathbf{u})$ (vorticity), $\delta = \nabla \cdot \mathbf{u}$ (divergence)
 
-Where $\text{Ro}$ is the Rossby number (inertial / Coriolis), $\text{Fr}$ is the Froude number (flow speed / gravity wave speed), $L_d = \text{Ro}/\text{Fr}$ is the Rossby deformation radius, and $\nu_\mathfrak{p}$ is the 8th-order hyperviscosity coefficient.
+Where $\text{Ro}$ is the Rossby number (inertial / Coriolis), $\text{Fr}$ is the Froude number (flow speed / gravity wave speed), $L_d = \text{Ro}/\text{Fr}$ is the Rossby deformation radius, and $\nu_\mathfrak{p}$ with $\mathfrak{p}=4$ is the 4th-order hyperviscosity coefficient.
 
 ---
 
