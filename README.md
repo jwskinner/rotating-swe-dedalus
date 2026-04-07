@@ -27,7 +27,7 @@ Where $\text{Ro}$ is the Rossby number (inertial / Coriolis), $\text{Fr}$ is the
 
 The linearized equations admit three normal modes per wavenumber $\mathbf{k} = (k, l)$. Initial conditions are constructed by projecting the GM spectrum onto one of:
 
-**1. Geostrophic Mode** — stationary ($\omega = 0$), non-divergent; Coriolis force balances pressure gradient:
+**1. Geostrophic Mode** 
 
 $$(\hat{u}, \hat{v}, \hat{h}) \propto \left(-\frac{il}{\text{Fr}^2},\ \frac{ik}{\text{Fr}^2},\ \frac{1}{\text{Ro}}\right)$$
 
@@ -75,6 +75,12 @@ All parameters are set in the `Config` dataclass at the top of `sw_model.py`:
 | `out_freq` | Output interval (non-dim. time units) | `0.2` |
 | `sim_time` | Total simulation time | `201.0` |
 
+### Dedalus Solver Settings
+
+These parameters are configured in the solver setup within `sw_model.py`:
+- **Timestepper:** `d3.RK443` (timesetpping with 3rd-order, 4-stage Runge-Kutta time-stepper).
+- **Dealiasing:**  Apply 3/2 dealiasing rule to the spectral bases.
+
 ---
 
 ## Outputs
@@ -98,3 +104,10 @@ python sw_model.py 2 wave
 # Balanced simulation, sim_number=3
 python sw_model.py 3 balanced
 ```
+
+---
+
+## Citation
+
+More information about the model and setup can be found in Skinner, Lawrence, & Callies (2025): 
+[arXiv:2505.00819](https://arxiv.org/abs/2505.00819)
