@@ -19,7 +19,7 @@ $$\frac{\partial h}{\partial t} + \nabla \cdot \mathbf{u} + \nu_\mathfrak{p} \na
 
 **Diagnostics:** $\zeta = \nabla \cdot (\hat{\mathbf{z}} \times \mathbf{u})$ (vorticity), $\delta = \nabla \cdot \mathbf{u}$ (divergence)
 
-Where $\text{Ro}$ is the Rossby number (inertial / Coriolis), $\text{Fr}$ is the Froude number (flow speed / gravity wave speed), $L_d = \text{Ro}/\text{Fr}$ is the Rossby deformation radius, and $\nu_\mathfrak{p}$ with $\mathfrak{p}=8$ is the 8th-order hyperviscosity coefficient.
+Where $\text{Ro}$ is the Rossby number (inertial / Coriolis), $\text{Fr}$ is the Froude number (flow speed / gravity wave speed), $L_d = \text{Ro}/\text{Fr}$ is the Rossby deformation radius, and $\nu_\mathfrak{p} = 1/\text{Re}$ with $\mathfrak{p}=8$ is the 8th-order hyperviscosity coefficient where $\text{Re}$ is the hyper-Reynolds number.
 
 ---
 
@@ -28,9 +28,11 @@ Where $\text{Ro}$ is the Rossby number (inertial / Coriolis), $\text{Fr}$ is the
 The linearized equations admit three normal modes per wavenumber $\mathbf{k} = (k, l)$. Initial conditions are constructed by projecting the GM spectrum onto one of:
 
 **1. Geostrophic Mode** — stationary ($\omega = 0$), non-divergent; Coriolis force balances pressure gradient:
+
 $$(\hat{u}, \hat{v}, \hat{h}) \propto \left(-\frac{il}{\text{Fr}^2},\ \frac{ik}{\text{Fr}^2},\ \frac{1}{\text{Ro}}\right)$$
 
 **2. Inertia-Gravity Waves (IGW)** — two propagating modes with dispersion:
+
 $$\omega = \pm\sqrt{\frac{1}{\text{Ro}^2} + \frac{|\mathbf{k}|^2}{\text{Fr}^2}}, \qquad (\hat{u}, \hat{v}, \hat{h}) \propto \left(\frac{il}{\text{Ro}} + k\omega,\ -\frac{ik}{\text{Ro}} + l\omega,\ |\mathbf{k}|^2\right)$$
 
 ---
