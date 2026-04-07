@@ -1,0 +1,12 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Model outputs
+outputs/
+*.png
+*.h5
+*.pdf
+
+# OS generated files
+.DS_Store
