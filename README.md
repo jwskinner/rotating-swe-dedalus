@@ -19,11 +19,7 @@ $$\frac{\partial h}{\partial t} + \nabla \cdot \mathbf{u} + \nu_\mathfrak{p} \na
 
 **Diagnostics:** $\zeta = \nabla \cdot (\hat{\mathbf{z}} \times \mathbf{u})$ (vorticity), $\delta = \nabla \cdot \mathbf{u}$ (divergence)
 
-
-| $\text{Ro}$ | Rossby number (inertial / Coriolis) |
-| $\text{Fr}$ | Froude number (flow speed / gravity wave speed) |
-| $L_d = \text{Ro}/\text{Fr}$ | Rossby deformation radius |
-| $\nu_\mathfrak{p}$ | 8th-order hyperviscosity coefficient |
+Where $\text{Ro}$ is the Rossby number (inertial / Coriolis), $\text{Fr}$ is the Froude number (flow speed / gravity wave speed), $L_d = \text{Ro}/\text{Fr}$ is the Rossby deformation radius, and $\nu_\mathfrak{p}$ is the 8th-order hyperviscosity coefficient.
 
 ---
 
