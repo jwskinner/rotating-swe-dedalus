@@ -7,6 +7,11 @@ outputs/
 *.png
 *.h5
 *.pdf
+*.err
+*.out
+
+# job script
+job_slurm
 
 # OS generated files
 .DS_Store

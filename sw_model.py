@@ -245,6 +245,7 @@ class ShallowWaterSolver:
         snaps.add_task(d3.div(self.u_vec), name='div')
         snaps.add_task(d3.div(d3.skew(self.u_vec)), name='zeta')
         snaps.add_task(d3.integ(0.5*(self.u_vec@self.u_vec) + self.h**2/Fr**2), name='total_energy')
+        snaps.add_task(d3.lap(self.h), name='lap_h', layout='g') # output the laplacian of h
 
     def run(self):
         cfg = self.cfg

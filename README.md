@@ -1,7 +1,7 @@
 # Rotating Shallow Water Model
 **Jack W. Skinner** · Caltech (2025)
 
-A pseudo-spectral solver for the **2D non-dimensional rotating shallow water equations** on a doubly-periodic domain, built with **[Dedalus 3](https://dedalus-project.org/)**. Simulations are initialized by projecting a Garrett-Munk energy spectrum onto a chosen normal mode (geostrophic or inertia-gravity wave).
+A pseudo-spectral solver for the **2D non-dimensional rotating shallow water equations** on a doubly-periodic domain using **[Dedalus 3](https://dedalus-project.org/)**. Simulations are initialized by projecting a Garrett-Munk energy spectrum onto a chosen normal mode (geostrophic or inertia-gravity wave).
 
 ---
 
