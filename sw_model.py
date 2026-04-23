@@ -61,8 +61,8 @@ class Config:
     amp: float = 1e-2                  # Amplitude of the initial condition (5e-2 for balanced, 1e-2 for wave to prevent nonlinear steepening)
 
     # GM spectrum model
-    k_star: float = 3.0                # Characteristic GM roll-off wavenumber
-    slope: float = 3.0                 # High-k 2D spectral slope (1D slope of k^-2)
+    k_star: float = 1.0                 # Characteristic GM roll-off wavenumber
+    slope: float = 3.0                  # High-k 2D spectral slope (1D slope of k^-2)
 
     # Time-stepping parameters (defaults set conditionally in __post_init__ depending on IC mode)
     dt: float | None = None
@@ -114,7 +114,8 @@ def compute_1d_spectrum(field_data: np.ndarray, x: np.ndarray, y: np.ndarray) ->
 
 def gm_reference(k: np.ndarray, cfg: Config) -> np.ndarray:
     """Generates the Garrett-Munk theoretical 1D spectrum as a function of k."""
-    gm_power_2d = 1.0 / (cfg.k_star**2 + k**2)**(cfg.slope / 2.0)
+    k_norm = k / cfg.k_star
+    gm_power_2d = (1.0 + k_norm**2) ** (-cfg.slope / 2.0)
     return k * gm_power_2d
 
 # ── Mode Setup & Projections ──────────────────────────────────────────
@@ -171,8 +172,9 @@ class InitialConditions:
         # Generate IC fields in spectral space
         mask = K > 0 # remove zero mode from u, v, h
         pu, pv, ph = proj_fn(KX[mask], KY[mask])
-    
-        gm_power_2d = 1.0 / (cfg.k_star**2 + K[mask]**2)**(cfg.slope / 2.0)
+        
+        k_norm = K[mask] / self.cfg.k_star
+        gm_power_2d = (1.0 + k_norm**2) ** (-self.cfg.slope / 2.0)
 
         # Base spectral amplitude from gm spectrum
         ke_weight = np.maximum(np.abs(pu)**2 + np.abs(pv)**2, 1e-30)
@@ -216,7 +218,6 @@ class InitialConditions:
         # label the Nyquist limit (for tuning the taper)
         k_nyquist = np.pi / (cfg.Lx / cfg.Nx)
         ax.axvline(k_nyquist, color='black', linestyle='-', alpha=0.3, label='Nyquist Limit')
-
         ax.set(xlabel=r'Angular Wavenumber $k$', ylabel='1D Spectral Power', title='IC Isotropic Power Spectrum')
         ax.set_ylim(bottom=1e-9)
         ax.legend()
