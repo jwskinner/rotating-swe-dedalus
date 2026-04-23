@@ -38,36 +38,64 @@ class Config:
     sim_number: int = 1
     ic_mode: str = 'balanced'   # 'balanced' or 'wave'
     
+    # grid resolution
     Nx: int = 256
     Ny: int = 256
     
+    # flow params
     Ro: float = 0.1   # Rossby number
     Fr: float = 0.1   # Froude number
     Re: float = 1e13  # Reynolds number (Hyper-reynolds number for 8th order hyper-dissipation)
+    Ld: float = Ro / Fr # Deformation radius
+
+    # domain params
+    Lx: float = 20 * Ld 
+    Ly: float = 20 * Ld
+    dx: float = Lx / Nx
+    dy: float = Ly / Ny
     
     # Spectral parameters for initial condition
     # All in units of Angular Wavenumber 'k'
     # Define a wavenumber band to excite
     k_c: float = 30.0                  # high wavenumber cutoff for exponential taper
-    amp: float = 1e-1                  # Amplitude of the initial condition
+    amp: float = 1e-2                  # Amplitude of the initial condition (5e-2 for balanced, 1e-2 for wave to prevent nonlinear steepening)
 
     # GM spectrum model
-    k_star: float = 2.0        # Characteristic GM roll-off wavenumber
-    slope: float = 3.0         # High-k 2D spectral slope (1D slope of k^-2)
-    
-    # Simulation parameters
-    dt: float = 0.01           # Time step
-    out_freq: float = 0.2      # Output frequency
-    sim_time: float = 201.0    # Simulation time
+    k_star: float = 3.0                # Characteristic GM roll-off wavenumber
+    slope: float = 3.0                 # High-k 2D spectral slope (1D slope of k^-2)
+
+    # Time-stepping parameters (defaults set conditionally in __post_init__ depending on IC mode)
+    dt: float | None = None
+    out_freq: float | None = None
+    sim_time: float | None = None
 
     frame_dir: Path = field(init=False)
     snapshot_dir: Path = field(init=False)
 
     def __post_init__(self):
+
+        # Simulation parameters (balanced)
+        if self.ic_mode == 'balanced':
+            print("Using balanced IC setup")
+            self.dt: float = 0.09           # Time step (100th of an eddy turnover time at the deformation radius)
+            self.out_freq: float = 0.9      # Output frequency (every 0.1 eddy turnover)
+            self.sim_time: float = 900.0    # Simulation time (100 turnover times)
+        
+        # Simulation parameters (wave)
+        elif self.ic_mode == 'wave':
+            T_gw_dx = self.dx * self.Fr       # Grid-scale gravity wave crossing time
+            T_inertial = 2 * np.pi * self.Ro  # Inertial period of gravity wave
+            print(f"[IC:wave] setup | Grid-scale gravity wave crossing time={T_gw_dx:.5f} | Inertial period={T_inertial:.3f}")
+
+            self.dt: float = 0.0007          # 1/10th of the grid-scale gravity wave crossing time
+            self.out_freq: float = 0.06      # 1/10th of the inertial period to capture wave oscillations
+            self.sim_time: float = 61.0      # 100 inertial periods (+1 to ensure last frame is output)
+
+        # setup IO
         tag = f"{self.ic_mode}_{self.Nx}_{self.sim_number}"
-        self.frame_dir = Path(f"./outputs/frames/{tag}")
+        self.frame_dir = Path(f"./outputs/outputs_test/frames/{tag}")
         self.frame_dir.mkdir(parents=True, exist_ok=True)
-        self.snapshot_dir = Path(f"./outputs/snapshots/{tag}")
+        self.snapshot_dir = Path(f"./outputs/outputs_test/snapshots/{tag}")
         self.snapshot_dir.mkdir(parents=True, exist_ok=True)
 
 
@@ -115,34 +143,30 @@ class InitialConditions:
     
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        Ro, Fr = cfg.Ro, cfg.Fr
-        Ld = Ro / Fr
+        Ro, Fr, Ld = cfg.Ro, cfg.Fr, cfg.Ld
         
         # Apply the selected mode
         if cfg.ic_mode == 'balanced':
-            self.Lx = self.Ly = 20 * Ld # scale the domain size for the problem based on Ld
             proj_fn = lambda k, l: project_balanced(k, l, Ro, Fr)
             
         elif cfg.ic_mode == 'wave':
-            #self.Lx = self.Ly = 10 * (2 * np.pi * Ld**2) # use wave scale if we like (optional)
-            self.Lx = self.Ly = 20 * Ld # Use same as for balanced flow 
+            #cfg.Lx = cfg.Ly = 20 * (2 * np.pi * Ld**2) # use wave scale if we like (optional)
             proj_fn = lambda k, l: project_wave(k, l, Ro, Fr)
             
         else:
             raise ValueError(f"Unknown ic_mode: '{cfg.ic_mode}'. Use 'balanced' or 'wave'.")
 
-        dx = self.Lx / cfg.Nx
-        self.x = np.linspace(-self.Lx / 2, self.Lx / 2, cfg.Nx)
-        self.y = np.linspace(-self.Ly / 2, self.Ly / 2, cfg.Ny)
+        self.x = np.linspace(-cfg.Lx / 2, cfg.Lx / 2, cfg.Nx)
+        self.y = np.linspace(-cfg.Ly / 2, cfg.Ly / 2, cfg.Ny)
 
         KX, KY = np.meshgrid(
-            2 * np.pi * np.fft.fftfreq(cfg.Nx, dx),
-            2 * np.pi * np.fft.fftfreq(cfg.Ny, self.Ly / cfg.Ny),
+            2 * np.pi * np.fft.fftfreq(cfg.Nx, cfg.dx),
+            2 * np.pi * np.fft.fftfreq(cfg.Ny, cfg.Ly / cfg.Ny),
             indexing='ij'
         )
         K = np.sqrt(KX**2 + KY**2)
 
-        print(f"[IC:{cfg.ic_mode}] Ld={Ld:.3f} CFL-safe dt={0.1 * dx * Fr:.5f}")
+        print(f"[IC:{cfg.ic_mode}] Ld={Ld:.3f} CFL-safe dt={0.1 * cfg.dx * Fr:.5f}")
 
         # Generate IC fields in spectral space
         mask = K > 0 # remove zero mode from u, v, h
@@ -180,14 +204,17 @@ class InitialConditions:
         scale_factor = ke[0] / ref_1d[0] # adjust amp of model fit so it matched the IC
         ref_1d_scaled = ref_1d * scale_factor
 
+        k2_ref = 1e2 * ke[0] * (k / k[0]) ** -2
+
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.loglog(k, ke, 'b-', lw=1.5, label='KE (Empirical)')
         ax.loglog(k, iso_h_1d, 'g-', lw=1.5, label=r'$h$')
-        ax.loglog(k, ref_1d_scaled, color='darkorange', ls='--', lw=2, label=f'GM Theoretical (p={self.cfg.slope})')
+        ax.loglog(k, ref_1d_scaled, color='darkorange', ls='-', lw=2, label=f'GM Model (p={self.cfg.slope})')
         ax.axvline(self.cfg.k_star, color='grey', linestyle=':', label='$k_*$ (Roll-off)')
+        ax.loglog(k, k2_ref, 'k--', lw=1, alpha=0.6, label=r'$k^{-2}$')
         
         # label the Nyquist limit (for tuning the taper)
-        k_nyquist = np.pi / (self.Lx / self.cfg.Nx)
+        k_nyquist = np.pi / (cfg.Lx / cfg.Nx)
         ax.axvline(k_nyquist, color='black', linestyle='-', alpha=0.3, label='Nyquist Limit')
 
         ax.set(xlabel=r'Angular Wavenumber $k$', ylabel='1D Spectral Power', title='IC Isotropic Power Spectrum')
@@ -212,8 +239,8 @@ class ShallowWaterSolver:
     def _build(self):
         coords = d3.CartesianCoordinates('x', 'y')
         dist = d3.Distributor(coords, dtype=np.float64)
-        xb = d3.RealFourier(coords['x'], self.cfg.Nx, bounds=(-self.ic.Lx / 2, self.ic.Lx / 2), dealias=1.5)
-        yb = d3.RealFourier(coords['y'], self.cfg.Ny, bounds=(-self.ic.Ly / 2, self.ic.Ly / 2), dealias=1.5)
+        xb = d3.RealFourier(coords['x'], cfg.Nx, bounds=(-cfg.Lx / 2, cfg.Lx / 2), dealias=1.5)
+        yb = d3.RealFourier(coords['y'], cfg.Ny, bounds=(-cfg.Ly / 2, cfg.Ly / 2), dealias=1.5)
 
         self.u_vec = dist.VectorField(coords, name='u_vec', bases=(xb, yb))
         self.h = dist.Field(name='h', bases=(xb, yb))
@@ -263,11 +290,13 @@ class ShallowWaterSolver:
                 max_z = self.flow.max('abs_zeta')
                 max_d = self.flow.max('abs_delta')
                 max_h = self.flow.max('height')
-                cfl = speed * dt / (2 * self.ic.Lx / cfg.Nx)
+                cfl = speed * dt / (2 * cfg.Lx / cfg.Nx)
+                t_adv = cfg.Ld / speed if speed > 1e-10 else 0.0
                 # output string 
                 print(f"iter={self.solver.iteration:6d} | "
                       f"t={t:7.3f} | "
                       f"CFL={cfl:6.3f} | "
+                      f"Tadv={t_adv:6.3f} | "
                       f"Ro_eff={speed*cfg.Ro:6.3f} | "
                       f"Fr_eff={speed*cfg.Fr:6.3f} | "
                       f"max_ζ={max_z:7.3f} | "
@@ -281,8 +310,8 @@ class ShallowWaterSolver:
         zeta = self.zeta['g'] if t > 0.0 else self.ic.zeta
         delta = self.delta['g'] if t > 0.0 else self.ic.div
 
-        xg = np.linspace(-self.ic.Lx / 2, self.ic.Lx / 2, u.shape[0])
-        yg = np.linspace(-self.ic.Ly / 2, self.ic.Ly / 2, u.shape[1])
+        xg = np.linspace(-cfg.Lx / 2, cfg.Lx / 2, u.shape[0])
+        yg = np.linspace(-cfg.Ly / 2, cfg.Ly / 2, u.shape[1])
         
         fig = plot_diagnostics(u, v, h, zeta, delta, xg, yg, t, self.cfg)
         fig.savefig(self.cfg.frame_dir / f"frame_{self.frame_count:04d}.png", dpi=100, bbox_inches='tight')
@@ -305,10 +334,10 @@ def plot_diagnostics(u: np.ndarray, v: np.ndarray, h: np.ndarray, zeta: np.ndarr
 
     # Spatial Plots
     plot_configs = [
-        (axs[0], np.sqrt(u**2 + v**2), 'viridis', (0, 1.0), r'$|\mathbf{u}|$'),
-        (axs[1], zeta, 'RdBu_r', (-10.0, 10.0), r'$\zeta$'),
+        (axs[0], np.sqrt(u**2 + v**2), 'viridis', (0, 0.1), r'$|\mathbf{u}|$'),
+        (axs[1], zeta, 'RdBu_r', (-1.0, 1.0), r'$\zeta$'),
         (axs[2], delta, 'RdBu_r', (-1.0, 1.0), r'$\delta$'),
-        (axs[3], h, 'Blues_r', (-0.1, 0.1), r'${h}$'),
+        (axs[3], h, 'Blues_r', (-0.01, 0.01), r'${h}$'),
     ]
 
     for ax, data, cmap, (lo, hi), title in plot_configs:
@@ -342,7 +371,7 @@ def plot_diagnostics(u: np.ndarray, v: np.ndarray, h: np.ndarray, zeta: np.ndarr
     ax_spec.set(xlabel=r'$k$', ylabel='Power', title='Isotropic Power Spectrum')
     ax_spec.set_ylim(bottom=1e-12, top=ke_1d.max()*1e2)
     ax_spec.grid(True, which='both', ls=':', alpha=0.5)
-    ax_spec.legend(loc='upper right', fontsize='small')
+    ax_spec.legend(loc='lower left', fontsize='small')
 
     fig.suptitle(f'Simulation {cfg.sim_number} ({cfg.ic_mode}) | t = {t:.3f}', fontsize=16)
     plt.tight_layout()
