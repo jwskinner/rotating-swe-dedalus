@@ -215,7 +215,7 @@ class InitialConditions:
         ax.axvline(self.cfg.k_star, color='grey', linestyle=':', label='$k_*$ (Roll-off)')
         ax.loglog(k, k2_ref, 'k--', lw=1, alpha=0.6, label=r'$k^{-2}$')
         
-        # label the Nyquist limit (for tuning the taper)
+        # label the Nyquist limit (for tuning taper function)
         k_nyquist = np.pi / (cfg.Lx / cfg.Nx)
         ax.axvline(k_nyquist, color='black', linestyle='-', alpha=0.3, label='Nyquist Limit')
         ax.set(xlabel=r'Angular Wavenumber $k$', ylabel='1D Spectral Power', title='IC Isotropic Power Spectrum')
